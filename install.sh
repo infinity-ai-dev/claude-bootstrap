@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Bootstrap do ambiente Claude Code — LEVEL UP / Illumi
+# Bootstrap do ambiente Claude Code — LEVEL UP / Illumi / Infinity.ai
 #
 # Instala o Claude Code pelo instalador nativo da Anthropic e replica o
 # ambiente padrão usado no host de dev do LEVEL FLOW:

@@ -15,12 +15,14 @@
 #   - plugin codex@openai-codex (marketplace openai/codex-plugin-cc)
 #
 # Uso:
-#   ./install.sh [--project-dir <dir>] [--model <modelo>] [--force-mcp] [--update]
+#   ./install.sh [--project-dir <dir>] [--model <modelo>] [--force-mcp] [--update] [--no-start]
 #
 # Segredos: exporte CONTEXT7_API_KEY e TAVILY_API_KEY, ou crie um arquivo
 # secrets.env ao lado deste script (ver secrets.env.example). Sem a chave,
 # o MCP correspondente é pulado com aviso (dá para rodar de novo depois).
 #
+# No final, persiste ~/.local/bin no ~/.bashrc (shells futuras) e, se houver
+# TTY interativo, já inicia o claude no --project-dir (pule com --no-start).
 # Idempotente: pode rodar mais de uma vez; só sobrescreve MCPs com --force-mcp.
 # =============================================================================
 set -euo pipefail
@@ -32,6 +34,7 @@ PROJECT_DIR="${PROJECT_DIR:-$HOME}"        # alvo do morphllm (fast-apply)
 CLAUDE_MODEL="${CLAUDE_MODEL:-claude-fable-5[1m]}"
 FORCE_MCP=0
 UPDATE_CLAUDE=0
+NO_START=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -39,6 +42,7 @@ while [[ $# -gt 0 ]]; do
     --model)       CLAUDE_MODEL="$2"; shift 2 ;;
     --force-mcp)   FORCE_MCP=1; shift ;;
     --update)      UPDATE_CLAUDE=1; shift ;;
+    --no-start)    NO_START=1; shift ;;
     -h|--help)     grep '^#' "$0" | sed 's/^# \{0,1\}//' | head -25; exit 0 ;;
     *) echo "argumento desconhecido: $1 (use --help)"; exit 1 ;;
   esac
@@ -106,6 +110,16 @@ else
   curl -fsSL https://claude.ai/install.sh | bash
   command -v claude >/dev/null 2>&1 || die "instalação do claude falhou (confira ~/.local/bin no PATH)"
   log "claude instalado: $(claude --version)"
+fi
+
+# garante ~/.local/bin no PATH das próximas sessões de shell (sem precisar
+# "reiniciar" nada agora: dentro deste script o PATH já foi exportado acima)
+RC_FILE="$HOME/.bashrc"
+if ! grep -qs '\.local/bin' "$RC_FILE" 2>/dev/null; then
+  printf '\n# claude-bootstrap: binário do Claude Code\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$RC_FILE"
+  log "PATH (~/.local/bin) persistido em $RC_FILE"
+else
+  log "PATH já persistido em $RC_FILE"
 fi
 
 # --- skills e regras globais ----------------------------------------------------
@@ -207,7 +221,20 @@ echo
 log "Bootstrap concluído. Estado dos MCPs:"
 claude mcp list || true
 echo
-log "Próximos passos manuais:"
-echo "  1. Autenticar: rode 'claude' e faça o login (ou exporte ANTHROPIC_API_KEY)."
-echo "  2. morphllm apontado para: $PROJECT_DIR (reconfigure com --project-dir --force-mcp em outro projeto)."
-echo "  3. O plugin codex requer o Codex CLI autenticado ('codex login') para funcionar."
+log "Lembretes:"
+echo "  - morphllm apontado para: $PROJECT_DIR (reconfigure com --project-dir --force-mcp em outro projeto)."
+echo "  - O plugin codex requer o Codex CLI autenticado ('codex login') para funcionar."
+echo "  - Shells novas já acham 'claude' no PATH ($RC_FILE); na shell atual use: export PATH=\"\$HOME/.local/bin:\$PATH\""
+echo
+
+# início automático: só em terminal interativo (TTY); em provisionamento
+# headless (cloud-init, CI, ssh sem -t) apenas informa o próximo passo
+if [[ "$NO_START" == "1" ]]; then
+  log "Pronto. Inicie com: claude  (login na primeira execução)"
+elif [[ -t 0 && -t 1 ]]; then
+  log "Iniciando o Claude Code (login na primeira execução)…"
+  cd "$PROJECT_DIR"
+  exec "$HOME/.local/bin/claude"
+else
+  warn "Sem TTY interativo — não dá para iniciar o claude daqui. Rode: claude"
+fi

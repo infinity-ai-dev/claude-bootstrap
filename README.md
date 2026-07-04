@@ -18,8 +18,10 @@ cp secrets.env.example secrets.env   # editar com as chaves context7/tavily
 ./install.sh --project-dir /caminho/do/projeto
 ```
 
-Depois: rodar `claude` uma vez para autenticar (ou exportar `ANTHROPIC_API_KEY`),
-e `codex login` se for usar o plugin codex.
+No final o script persiste o PATH no `~/.bashrc` e, se o terminal for
+interativo, **já inicia o claude** no diretório do projeto (o login acontece
+na primeira execução; ou exporte `ANTHROPIC_API_KEY`). Em provisionamento
+headless use `--no-start`. `codex login` à parte, se for usar o plugin codex.
 
 > Alternativa sem clone: `scp -r` da pasta inteira a partir de uma máquina já
 > configurada — aí o `secrets.env` preenchido viaja junto (ele é gitignored,
@@ -33,6 +35,7 @@ e `codex login` se for usar o plugin codex.
 | `--model <id>` | Modelo default do settings.json. Default: `claude-fable-5[1m]`. |
 | `--force-mcp` | Reescreve MCPs já configurados (ex.: trocar o project-dir do morphllm). |
 | `--update` | Reroda o instalador nativo mesmo com claude já presente. |
+| `--no-start` | Não inicia o claude no final (útil em provisionamento automatizado). |
 
 ## O que é instalado
 
